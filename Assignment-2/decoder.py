@@ -33,10 +33,10 @@ if __name__ == "__main__":
 			if maze[i][j] == 3:
 				end_state.append(idxs[i][j])
 
-	if value[start_state] < 0:
-		print("Did Not Reach Terminal State")
-		print("Aborting")
-		exit(0)
+	# if value[start_state] < 0:
+	# 	print("Did Not Reach Terminal State")
+	# 	print("Aborting")
+	# 	exit(0)
 
 	direction = {0:'N', 1:'S', 2:'W', 3:'E'}
 	transition = {0:(-1, 0), 1:(1, 0), 2:(0, -1), 3:(0, 1)}
