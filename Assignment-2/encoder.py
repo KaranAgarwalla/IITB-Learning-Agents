@@ -57,7 +57,7 @@ def encode(maze):
 				print(f'transition {idxs[i][j]} {key} {idxs[x][y]} {r} {1}')
 
 	print('mdptype episodic')
-	print(f'discount {1}')
+	print(f'discount {0.999}')
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

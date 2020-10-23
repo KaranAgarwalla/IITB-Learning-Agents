@@ -76,12 +76,15 @@ class VerifyOutputPlanner:
             
         
 if __name__ == "__main__":
+    import time
+    start = time.time()
     parser.add_argument("--algorithm",type=str,default="all")
     parser.add_argument("--pe",type=str,default="yes")
     args = parser.parse_args()
     #print(args)
     #sys.exit(0)
     algo = VerifyOutputPlanner(args.algorithm,args.pe)
+    print(time.time()-start)
 
 
 

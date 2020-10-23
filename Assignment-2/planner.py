@@ -70,14 +70,13 @@ def valueIteration(T, R, gamma):
 		Returns optimal policy using Value Iteration
 	'''
 	V = np.zeros(T.shape[0])
-	tolerance = 1e-8
+	tolerance = 1e-12
 	diff = 1
 	while diff>tolerance:
 		nV = np.amax(actionValueFunction(T, R, gamma, V), axis = 1)
-		diff = np.amax(abs(nV-V))
+		diff = np.linalg.norm(nV-V)
 		V = nV
 	return V
-
 
 def howardPolicyIteration(T, R, gamma):
 	'''
@@ -85,17 +84,17 @@ def howardPolicyIteration(T, R, gamma):
 	'''
 	policy = np.random.choice(T.shape[1], T.shape[0])
 	V = valueFunction(T, R, gamma, policy)
-	
+	tolerance = 1e-12
 	while True:
 		Q = actionValueFunction(T, R, gamma, V)
-		nPolicy = np.argmax(Q, axis = 1)
-		if np.array_equal(policy, nPolicy):
+		deltaV = np.amax(Q, axis = 1) - V
+		if np.amax(deltaV) < tolerance:
 			break
-		policy = nPolicy
+		nPolicy = np.argmax(Q, axis = 1)
+		policy[deltaV >= tolerance] = nPolicy[deltaV >= tolerance]
 		V = valueFunction(T, R, gamma, policy)
 
 	return V, policy
-
 
 def linearProgrammingSolver(T, R, gamma):
 	'''
@@ -139,7 +138,6 @@ if __name__ == "__main__":
 		V = valueIteration(T, R, gamma)
 		Q = actionValueFunction(T, R, gamma, V)
 		policy = np.argmax(Q, axis = 1)
-		V = valueFunction(T, R, gamma, policy)
 
 	elif args.algorithm == 'hpi':
 		V, policy = howardPolicyIteration(T, R, gamma)

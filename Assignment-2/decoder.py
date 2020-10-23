@@ -48,15 +48,7 @@ if __name__ == "__main__":
 		if maze[x][y] == 1:
 			print("Aborting")
 			exit(0)
-		# print(f'{x} {y}')
-		# print(policy[curr_state])
 		x += transition[policy[curr_state]][0]
 		y += transition[policy[curr_state]][1]
-		# print(curr_state)
 		curr_state = idxs[x][y]
-		# print(curr_state)
-		# cntr -= 1
-		# if curr_state == 1:
-		# 	print("Aborting")
-		# 	exit(0)
 
