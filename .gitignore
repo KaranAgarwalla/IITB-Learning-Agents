@@ -1,8 +1,8 @@
 __pycache__/
 *.py[cod]
-report.docx
 **/.DS_Store
 .ipynb_checkpoints
 */.vscode/*
 */__pycache__/*
 */*.npy
+~$report.docx
