@@ -1,4 +1,5 @@
 from gridWorld import gridWorld
+from model import Model
 import numpy as np 
 import argparse
 import matplotlib.pyplot as plt
@@ -94,7 +95,7 @@ def expectedSarsaAgent(epsilon, learning_rate, episodes, grid, seed, flag):
 			timer += 1
 
 			policy = np.ones(grid.numMoves)*epsilon/grid.numMoves
-			policy[np.argmax(Q[nextState[0], nextState[1], :])] += 1 - epsilon;
+			policy[np.argmax(Q[nextState[0], nextState[1], :])] += 1 - epsilon
 			target = reward + np.sum(Q[nextState[0], nextState[1], :]*policy)
 
 			Q[currState[0]][currState[1]][currAction] *= 1 - learning_rate
@@ -103,6 +104,46 @@ def expectedSarsaAgent(epsilon, learning_rate, episodes, grid, seed, flag):
 			currState = nextState.copy()
 
 		time_steps[i] = timer
+	if flag:
+		return time_steps
+	else:
+		return Q
+
+def dynaQAgent(epsilon, learning_rate, episodes, grid, seed, planningSteps, flag):
+	np.random.seed(seed)
+	time_steps = np.zeros(episodes+1)
+	# Q Learning Parameters
+	Q 	= np.zeros((grid.numRows, grid.numCols, grid.numMoves))
+	# The Model
+	model = Model(grid.numRows, grid.numCols, grid.numMoves)
+	timer = 0
+
+	for i in range(1, episodes+1):
+		
+		currState = grid.startState.copy()
+
+		while not np.array_equal(currState, grid.endState):
+			
+			currAction = getAction(Q, epsilon, currState)
+			nextState, reward = grid.nextMove(currAction)
+			timer += 1
+
+			target = reward + np.amax(Q[nextState[0], nextState[1], :])
+			Q[currState[0]][currState[1]][currAction] *= 1 - learning_rate
+			Q[currState[0]][currState[1]][currAction] += learning_rate*target
+			
+			model.updateModel(currState, currAction, nextState, reward)
+			currState = nextState.copy()
+
+			for steps in range(planningSteps):
+				# Update State, Action, Next State, Reward
+				us, ua, uns, ur = model.obtainTransition()
+				ut = ur + np.amax(Q[uns[0], uns[1], :])
+				Q[us[0]][us[1]][ua] *= 1 - learning_rate
+				Q[us[0]][us[1]][ua] += learning_rate * ut
+
+		time_steps[i] = timer
+
 	if flag:
 		return time_steps
 	else:
@@ -148,7 +189,7 @@ if __name__ == "__main__":
 	parser.add_argument("--numMoves", type = int, default = 4, choices = [4, 8, 9], help="Baseline, King's Moves, 9 Moves")
 
 	### Algorithm related parameters
-	parser.add_argument("--algorithm", default='Sarsa', choices = ['Sarsa', 'QLearning', 'ExpectedSarsa', 'all'])
+	parser.add_argument("--algorithm", default='Sarsa', choices = ['Sarsa', 'QLearning', 'ExpectedSarsa', 'DynaQ', 'all'])
 	parser.add_argument("--epsilon", type = float, default = 0.1, help="epsilon")
 	parser.add_argument("--learning_rate", type = float, default = 0.5, help="Learning Rate")
 	parser.add_argument("--episodes", type = int, default = 170, help="Number of episodes")
@@ -156,6 +197,7 @@ if __name__ == "__main__":
 	parser.add_argument("--showPath", default= False, action='store_true', help="Show Greedy Path")
 	parser.add_argument("--taskID", type = str, default = "", help="Task Number")
 	parser.add_argument("--title", type = str, default = "Episodes vs TimeSteps", help="Title of the plot")
+	parser.add_argument("--planningSteps", type = int, default = 0, help="Number of Planning Steps in DynaQ Algorithm")
 	args = parser.parse_args()
 
 	gridParams  	= {}
@@ -177,6 +219,7 @@ if __name__ == "__main__":
 		algorithm_lst.append('Sarsa')
 		algorithm_lst.append('QLearning')
 		algorithm_lst.append('ExpectedSarsa')
+		algorithm_lst.append('DynaQ')
 	else:
 		algorithm_lst.append(args.algorithm)
 
@@ -184,6 +227,7 @@ if __name__ == "__main__":
 	time_steps_sarsa = None
 	time_steps_qLearning = None
 	time_steps_expectedSarsa = None
+	time_steps_dynaQ = None
 
 	if 'Sarsa' in algorithm_lst:
 		time_steps_sarsa 		= np.array([sarsaAgent(epsilon, learning_rate, episodes, grid, seed, 1) for seed in range(numSeeds)])
@@ -192,6 +236,7 @@ if __name__ == "__main__":
 			Q 	= np.array([sarsaAgent(epsilon, learning_rate, episodes, grid, seed, 0) for seed in range(numSeeds)])
 			Q 	= np.mean(Q, axis = 0)
 			showPath(Q, grid, f'Task {args.taskID} Sarsa(0) Agent Path')
+	
 	if 'QLearning' in algorithm_lst:
 		time_steps_qLearning 	= np.array([qLearningAgent(epsilon, learning_rate, episodes, grid, seed, 1) for seed in range(numSeeds)])
 		time_steps_qLearning 	= np.mean(time_steps_qLearning, axis = 0)
@@ -199,6 +244,7 @@ if __name__ == "__main__":
 			Q 	= np.array([qLearningAgent(epsilon, learning_rate, episodes, grid, seed, 0) for seed in range(numSeeds)])
 			Q 	= np.mean(Q, axis = 0)
 			showPath(Q, grid, f'Task {args.taskID} QLearning Agent Path')
+	
 	if 'ExpectedSarsa' in algorithm_lst:
 		time_steps_expectedSarsa= np.array([expectedSarsaAgent(epsilon, learning_rate, episodes, grid, seed, 1) for seed in range(numSeeds)])
 		time_steps_expectedSarsa= np.mean(time_steps_expectedSarsa, axis = 0)
@@ -206,9 +252,16 @@ if __name__ == "__main__":
 			Q 	= np.array([expectedSarsaAgent(epsilon, learning_rate, episodes, grid, seed, 0) for seed in range(numSeeds)])
 			Q 	= np.mean(Q, axis = 0)
 			showPath(Q, grid, f'Task {args.taskID} Expected Sarsa Agent Path')
-
+	
+	if 'DynaQ' in algorithm_lst:
+		time_steps_dynaQ 		= np.array([dynaQAgent(epsilon, learning_rate, episodes, grid, seed, args.planningSteps, 1) for seed in range(numSeeds)])
+		time_steps_dynaQ 		= np.mean(time_steps_dynaQ, axis = 0)
+		if args.showPath:
+			Q 	= np.array([dynaQAgent(epsilon, learning_rate, episodes, grid, seed, args.planningSteps, 0) for seed in range(numSeeds)])
+			Q 	= np.mean(Q, axis = 0)
+			showPath(Q, grid, f'Task {args.taskID} dynaQ Agent Path')
+	
 	episodes_y = np.arange(episodes+1, dtype = np.int64)
-
 	plt.figure()
 	if 'Sarsa' in algorithm_lst:
 		plt.plot(time_steps_sarsa, episodes_y, label = "Sarsa")
@@ -216,8 +269,12 @@ if __name__ == "__main__":
 		plt.plot(time_steps_qLearning, episodes_y, label = "Q Learning")
 	if 'ExpectedSarsa' in algorithm_lst:
 		plt.plot(time_steps_expectedSarsa, episodes_y, label = "Expected Sarsa")
+	if 'DynaQ' in algorithm_lst:
+		plt.plot(time_steps_dynaQ, episodes_y, label = "Dyna Q")
+
 	if len(algorithm_lst) > 1:
 		plt.legend()
+
 	plt.title(f'Task:{args.taskID} {args.title}')
 	plt.xlabel("Time steps")
 	plt.ylabel("Episodes")
